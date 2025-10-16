@@ -28,7 +28,7 @@ const createNafta = (req, res) => {
         return res.status(400).json({ error: 'Datos inválidos' });
     }
 
-    naftasModel.createNafta(nombre, precio_por_litro, stock_litros, function(err) {
+    naftasModel.createNafta(nombre, precio_por_litro, stock_litros, function (err) {
         if (err) return res.status(500).json({ error: 'Error al crear nafta' });
         res.status(201).json({ message: 'Nafta creada correctamente', naftaId: this.lastID });
     });
@@ -40,9 +40,6 @@ const updateNafta = (req, res) => {
     const { nombre, precio_por_litro, stock_litros } = req.body;
 
     if (isNaN(id) || id <= 0) return res.status(400).json({ error: 'ID inválido' });
-    if (!nombre || typeof precio_por_litro !== 'number' || precio_por_litro <= 0 || typeof stock_litros !== 'number' || stock_litros < 0) {
-        return res.status(400).json({ error: 'Datos inválidos' });
-    }
 
     naftasModel.updateNafta(id, nombre, precio_por_litro, stock_litros, (err) => {
         if (err) return res.status(500).json({ error: 'Error al actualizar nafta' });
@@ -50,12 +47,26 @@ const updateNafta = (req, res) => {
     });
 };
 
+// 🔥 Nuevo método para cambiar solo el precio
+const updateNaftaPrice = (req, res) => {
+    const id = parseInt(req.params.id);
+    const { precio_por_litro } = req.body;
+
+    if (isNaN(id) || id <= 0) return res.status(400).json({ error: 'ID inválido' });
+    if (typeof precio_por_litro !== 'number' || precio_por_litro <= 0) {
+        return res.status(400).json({ error: 'Precio inválido' });
+    }
+
+    naftasModel.updateNaftaPrice(id, precio_por_litro, (err) => {
+        if (err) return res.status(500).json({ error: 'Error al actualizar precio' });
+        res.status(200).json({ message: 'Precio de nafta actualizado correctamente' });
+    });
+};
+
 // Eliminar nafta
 const deleteNafta = (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id) || id <= 0) return res.status(400).json({ error: 'ID inválido' });
-
-    // Opcional: verificar si hay ventas asociadas antes de eliminar
 
     naftasModel.deleteNafta(id, (err) => {
         if (err) return res.status(500).json({ error: 'Error al eliminar nafta' });
@@ -68,5 +79,6 @@ module.exports = {
     getNaftaById,
     createNafta,
     updateNafta,
+    updateNaftaPrice, 
     deleteNafta
 };

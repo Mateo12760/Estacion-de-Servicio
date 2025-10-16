@@ -12,7 +12,6 @@ const getNaftaById = (id, callback) => {
 
 // Crear nueva nafta
 const createNafta = (nombre, precio_por_litro, stock_litros, callback) => {
-    // Validaciones internas del modelo
     if (
         typeof nombre !== 'string' || !nombre.trim() ||
         typeof precio_por_litro !== 'number' || precio_por_litro <= 0 ||
@@ -28,9 +27,8 @@ const createNafta = (nombre, precio_por_litro, stock_litros, callback) => {
     );
 };
 
-// Actualizar nafta
+// Actualizar nafta completa
 const updateNafta = (id, nombre, precio_por_litro, stock_litros, callback) => {
-    // Validaciones internas del modelo
     if (
         typeof nombre !== 'string' || !nombre.trim() ||
         typeof precio_por_litro !== 'number' || precio_por_litro <= 0 ||
@@ -46,6 +44,19 @@ const updateNafta = (id, nombre, precio_por_litro, stock_litros, callback) => {
     );
 };
 
+// 🔥 Nuevo método: actualizar solo el precio
+const updateNaftaPrice = (id, nuevoPrecio, callback) => {
+    if (typeof nuevoPrecio !== 'number' || nuevoPrecio <= 0) {
+        return callback(new Error('Precio inválido'));
+    }
+
+    db.run(
+        "UPDATE naftas SET precio_por_litro=? WHERE id=?",
+        [nuevoPrecio, id],
+        callback
+    );
+};
+
 // Eliminar nafta
 const deleteNafta = (id, callback) => {
     db.run("DELETE FROM naftas WHERE id=?", [id], callback);
@@ -56,5 +67,6 @@ module.exports = {
     getNaftaById,
     createNafta,
     updateNafta,
+    updateNaftaPrice, // 👈 agregado
     deleteNafta
 };
