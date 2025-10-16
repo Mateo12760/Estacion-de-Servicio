@@ -40,7 +40,14 @@ const createCliente = (req, res) => {
       console.error('Error al crear cliente:', err);
       res.status(500).json({ error: 'Error al crear el cliente' });
     } else {
-      res.status(201).json({ message: 'Cliente creado correctamente' });
+      res.status(201).json({ 
+        id: result.id,
+        nombre,
+        apellido,
+        dni,
+        email,
+        telefono
+       });
     }
   });
 };
