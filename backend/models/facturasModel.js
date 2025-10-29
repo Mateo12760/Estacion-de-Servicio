@@ -1,70 +1,51 @@
-// models/facturasModel.js
 const { db } = require('../data/db');
 
 // Obtener todas las facturas
-const getAllFacturas = () => {
-  return new Promise((resolve, reject) => {
-    db.all(`
-      SELECT f.*, v.total AS total_venta
-      FROM facturas f
-      JOIN ventas v ON f.venta_id = v.id
-    `, (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows);
-    });
-  });
+const getAllFacturas = (callback) => {
+  db.all(`
+    SELECT f.id, f.tipo, f.fecha, f.total, c.nombre || ' ' || c.apellido AS cliente
+    FROM facturas f
+    LEFT JOIN clientes c ON f.cliente_id = c.id
+    ORDER BY f.fecha DESC
+  `, callback);
 };
 
 // Obtener factura por ID
-const getFacturaById = (id) => {
-  return new Promise((resolve, reject) => {
-    db.get(`
-      SELECT f.*, v.total AS total_venta
-      FROM facturas f
-      JOIN ventas v ON f.venta_id = v.id
-      WHERE f.id = ?
-    `, [id], (err, row) => {
-      if (err) reject(err);
-      else resolve(row);
-    });
-  });
+const getFacturaById = (id, callback) => {
+  db.get(`
+    SELECT f.id, f.tipo, f.fecha, f.total, c.nombre || ' ' || c.apellido AS cliente
+    FROM facturas f
+    LEFT JOIN clientes c ON f.cliente_id = c.id
+    WHERE f.id = ?
+  `, [id], callback);
 };
 
-// Crear factura
-const createFactura = ({ venta_id, tipo, total }) => {
-  return new Promise((resolve, reject) => {
-    db.run(
-      "INSERT INTO facturas (venta_id, tipo, total, fecha) VALUES (?, ?, ?, datetime('now'))",
-      [venta_id, tipo, total],
-      function (err) {
-        if (err) reject(err);
-        else resolve(this.lastID);
-      }
-    );
-  });
+// Crear factura manual (opcional)
+const createFactura = (tipo, cliente_id, total, callback) => {
+  db.run(
+    "INSERT INTO facturas (tipo, cliente_id, total, fecha) VALUES (?, ?, ?, datetime('now'))",
+    [tipo, cliente_id, total],
+    function (err) {
+      callback(err, { id: this.lastID });
+    }
+  );
 };
 
-// Actualizar factura
-const updateFactura = (id, { tipo }) => {
-  return new Promise((resolve, reject) => {
-    db.run(
-      "UPDATE facturas SET tipo=? WHERE id=?",
-      [tipo, id],
-      function (err) {
-        if (err) reject(err);
-        else resolve(this.changes);
-      }
-    );
-  });
+// Actualizar tipo de factura
+const updateFactura = (id, tipo, callback) => {
+  db.run(
+    "UPDATE facturas SET tipo=? WHERE id=?",
+    [tipo, id],
+    function (err) {
+      callback(err, { changes: this.changes });
+    }
+  );
 };
 
 // Eliminar factura
-const deleteFactura = (id) => {
-  return new Promise((resolve, reject) => {
-    db.run("DELETE FROM facturas WHERE id=?", [id], function (err) {
-      if (err) reject(err);
-      else resolve(this.changes);
-    });
+const deleteFactura = (id, callback) => {
+  db.run("DELETE FROM facturas WHERE id=?", [id], function (err) {
+    callback(err, { changes: this.changes });
   });
 };
 
@@ -75,4 +56,3 @@ module.exports = {
   updateFactura,
   deleteFactura
 };
-

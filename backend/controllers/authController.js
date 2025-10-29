@@ -1,73 +1,70 @@
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs");
-const { registerUser, findUserByEmail } = require("../models/authModel");
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const db = require('../data/db');
 
-const SECRET_KEY = "nafta_super_segura"; // ⚠ En producción guardalo en variables de entorno (.env)
+// Clave secreta para JWT
+const SECRET_KEY = 'clave_secreta_super_segura';
 
-// Registro
-async function register(req, res) {
-  try {
-    const { nombre, email, password, rol } = req.body;
-    if (!nombre || !email || !password) {
-      return res.status(400).json({ message: "Faltan campos obligatorios" });
-    }
+// ===================== LOGIN =====================
+exports.login = (req, res) => {
+  const { email, password } = req.body;
 
-    const existingUser = await findUserByEmail(email);
-    if (existingUser) {
-      return res.status(400).json({ message: "El email ya está registrado" });
-    }
+  if (!email || !password)
+    return res.status(400).json({ message: 'Email y contraseña requeridos.' });
 
-    const user = await registerUser(nombre, email, password, rol);
-    res.status(201).json({ message: "Usuario creado exitosamente", user });
-  } catch (error) {
-    res.status(500).json({ message: "Error en el registro", error });
-  }
-}
+  const query = 'SELECT * FROM usuarios WHERE email = ? AND is_active = 1';
+  db.get(query, [email], (err, user) => {
+    if (err) return res.status(500).json({ message: 'Error interno', error: err.message });
+    if (!user) return res.status(401).json({ message: 'Usuario no encontrado o inactivo' });
 
-// Login
-async function login(req, res) {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password)
-      return res.status(400).json({ message: "Email y contraseña son obligatorios" });
+    // Verificar contraseña
+    const isMatch = bcrypt.compareSync(password, user.password);
+    if (!isMatch) return res.status(401).json({ message: 'Contraseña incorrecta' });
 
-    const user = await findUserByEmail(email);
-    if (!user) return res.status(404).json({ message: "Usuario no encontrado" });
+    // Generar token
+    const token = jwt.sign(
+      { id: user.id, email: user.email, rol: user.rol },
+      SECRET_KEY,
+      { expiresIn: '4h' }
+    );
 
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) return res.status(401).json({ message: "Contraseña incorrecta" });
-
-    const token = jwt.sign({ id: user.id, email: user.email, rol: user.rol }, SECRET_KEY, {
-      expiresIn: "4h",
-    });
-
-    res.status(200).json({
-      message: "Login exitoso",
+    return res.json({
+      message: 'Inicio de sesión exitoso',
       token,
-      user: { id: user.id, nombre: user.nombre, rol: user.rol },
+      usuario: { id: user.id, nombre: user.nombre, email: user.email, rol: user.rol }
     });
-  } catch (error) {
-    res.status(500).json({ message: "Error al iniciar sesión", error });
-  }
-}
-
-// Middleware para verificar token
-function verifyToken(req, res, next) {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
-
-  if (!token) return res.status(403).json({ message: "Token requerido" });
-
-  jwt.verify(token, SECRET_KEY, (err, decoded) => {
-    if (err) return res.status(403).json({ message: "Token inválido o expirado" });
-
-    req.user = decoded;
-    next();
   });
-}
+};
 
-module.exports = {
-  register,
-  login,
-  verifyToken,
+// ===================== REGISTRO =====================
+exports.register = (req, res) => {
+  const { nombre, email, password, rol } = req.body;
+
+  if (!nombre || !email || !password)
+    return res.status(400).json({ message: 'Nombre, email y contraseña son requeridos.' });
+
+  const hashedPassword = bcrypt.hashSync(password, 10);
+
+  const query = `
+    INSERT INTO usuarios (nombre, email, password, rol)
+    VALUES (?, ?, ?, ?)
+  `;
+  db.run(query, [nombre, email, hashedPassword, rol || 'empleado'], function (err) {
+    if (err) {
+      if (err.message.includes('UNIQUE constraint failed'))
+        return res.status(400).json({ message: 'El email ya está registrado.' });
+      return res.status(500).json({ message: 'Error al registrar usuario.', error: err.message });
+    }
+
+    return res.status(201).json({
+      message: 'Usuario registrado exitosamente.',
+      usuario: { id: this.lastID, nombre, email, rol: rol || 'empleado' }
+    });
+  });
+};
+
+// ===================== LOGOUT =====================
+exports.logout = (req, res) => {
+  // En JWT el logout se maneja del lado del cliente eliminando el token
+  return res.json({ message: 'Sesión cerrada. El token fue invalidado del lado del cliente.' });
 };

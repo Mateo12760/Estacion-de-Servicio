@@ -1,94 +1,73 @@
-// ventasModel.js
+// models/ventasModel.js
 const { db } = require('../data/db');
 
 // Obtener todas las ventas
 const getAllVentas = (callback) => {
-  db.all("SELECT * FROM ventas", callback);
+  const query = `
+    SELECT v.id, n.nombre AS nafta, v.litros, v.monto, v.empleado, v.fecha, 
+           v.factura_id, f.tipo AS tipo_factura, f.total AS total_factura
+    FROM ventas v
+    LEFT JOIN naftas n ON v.nafta_id = n.id
+    LEFT JOIN facturas f ON v.factura_id = f.id
+    ORDER BY v.fecha DESC
+  `;
+  db.all(query, callback);
 };
 
 // Obtener venta por ID
 const getVentaById = (id, callback) => {
-  if (typeof id !== 'number' || id <= 0) {
-    return callback(new Error('ID de venta inválido'));
-  }
-  db.get("SELECT * FROM ventas WHERE id=?", [id], callback);
+  const query = `
+    SELECT v.id, n.nombre AS nafta, v.litros, v.monto, v.empleado, v.fecha,
+           v.factura_id, f.tipo AS tipo_factura, f.total AS total_factura
+    FROM ventas v
+    LEFT JOIN naftas n ON v.nafta_id = n.id
+    LEFT JOIN facturas f ON v.factura_id = f.id
+    WHERE v.id = ?
+  `;
+  db.get(query, [id], callback);
 };
 
-// Crear nueva venta con validaciones
-const createVenta = (cliente_id, nafta_id, litros, monto, callback) => {
-  if (
-    typeof cliente_id !== 'number' || cliente_id <= 0 ||
-    typeof nafta_id !== 'number' || nafta_id <= 0 ||
-    typeof litros !== 'number' || litros <= 0 ||
-    typeof monto !== 'number' || monto <= 0
-  ) {
-    return callback(new Error('Parámetros inválidos para crear venta'));
+// Crear nueva venta
+const createVenta = (nafta_id, litros, monto, empleado, factura_id, callback) => {
+  if (!nafta_id || !litros || !monto) {
+    return callback(new Error('Faltan datos obligatorios'));
   }
 
-  const sql = `
-    INSERT INTO ventas (cliente_id, nafta_id, litros, monto)
-    VALUES (?, ?, ?, ?)
-  `;
-  db.run(sql, [cliente_id, nafta_id, litros, monto], function(err) {
-    if (callback) callback(err, this.lastID); // devuelve el id de la venta creada
-  });
+  db.run(
+    `INSERT INTO ventas (nafta_id, litros, monto, empleado, factura_id)
+     VALUES (?, ?, ?, ?, ?)`,
+    [nafta_id, litros, monto, empleado || 'Desconocido', factura_id || null],
+    function (err) {
+      if (err) callback(err);
+      else callback(null, { id: this.lastID });
+    }
+  );
 };
 
-// Vincular factura a venta
-const linkFacturaToVenta = (ventaId, facturaId, callback) => {
-  if (
-    typeof ventaId !== 'number' || ventaId <= 0 ||
-    typeof facturaId !== 'number' || facturaId <= 0
-  ) {
-    return callback(new Error('Parámetros inválidos para vincular factura'));
-  }
-
-  const sql = `
-    UPDATE ventas
-    SET factura_id = ?
-    WHERE id = ?
-  `;
-  db.run(sql, [facturaId, ventaId], callback);
-};
-
-// Actualizar venta con validaciones
-const updateVenta = (id, cliente_id, nafta_id, factura_id, litros, monto, callback) => {
-  if (
-    typeof id !== 'number' || id <= 0 ||
-    typeof cliente_id !== 'number' || cliente_id <= 0 ||
-    typeof nafta_id !== 'number' || nafta_id <= 0 ||
-    (factura_id !== null && typeof factura_id !== 'number') ||
-    typeof litros !== 'number' || litros <= 0 ||
-    typeof monto !== 'number' || monto <= 0
-  ) {
-    return callback(new Error('Parámetros inválidos para actualizar venta'));
-  }
-
-  const sql = `
-    UPDATE ventas
-    SET cliente_id = ?, nafta_id = ?, factura_id = ?, litros = ?, monto = ?
-    WHERE id = ?
-  `;
-  db.run(sql, [cliente_id, nafta_id, factura_id, litros, monto, id], callback);
+// Actualizar venta (por ejemplo, cambiar empleado o monto)
+const updateVenta = (id, { litros, monto, empleado, factura_id }, callback) => {
+  db.run(
+    `UPDATE ventas
+     SET litros = ?, monto = ?, empleado = ?, factura_id = ?
+     WHERE id = ?`,
+    [litros, monto, empleado, factura_id, id],
+    function (err) {
+      callback(err, { changes: this.changes });
+    }
+  );
 };
 
 // Eliminar venta
 const deleteVenta = (id, callback) => {
-  if (typeof id !== 'number' || id <= 0) {
-    return callback(new Error('ID de venta inválido'));
-  }
-  const sql = `
-    DELETE FROM ventas
-    WHERE id = ?
-  `;
-  db.run(sql, [id], callback);
+  db.run("DELETE FROM ventas WHERE id = ?", [id], function (err) {
+    callback(err, { changes: this.changes });
+  });
 };
 
 module.exports = {
   getAllVentas,
   getVentaById,
   createVenta,
-  linkFacturaToVenta,
   updateVenta,
   deleteVenta
 };

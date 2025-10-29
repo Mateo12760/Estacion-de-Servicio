@@ -28,11 +28,11 @@ const createNafta = (nombre, precio_por_litro, stock_litros, callback) => {
 };
 
 // Actualizar nafta completa
-const updateNafta = (id, nombre, precio_por_litro, stock_litros, callback) => {
+const updateNafta = (id, nombre, precio_por_litro, callback) => {
     if (
         typeof nombre !== 'string' || !nombre.trim() ||
-        typeof precio_por_litro !== 'number' || precio_por_litro <= 0 ||
-        typeof stock_litros !== 'number' || stock_litros < 0
+        typeof precio_por_litro !== 'number' || precio_por_litro <= 0 
+        
     ) {
         return callback(new Error('Datos inválidos al actualizar la nafta'));
     }

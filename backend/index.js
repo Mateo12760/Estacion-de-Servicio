@@ -1,5 +1,7 @@
+require('dotenv').config(); 
 const express = require("express");
 const cors = require("cors");
+
 
 // Importar rutas
 const naftasRoutes = require("./routes/naftasRoutes");
@@ -7,6 +9,8 @@ const ventasRoutes = require("./routes/ventasRoutes");
 const recargasRoutes = require("./routes/recargasRoutes");
 const facturasRoutes = require("./routes/facturasRoutes");
 const clientesRoutes = require("./routes/clientesRoutes");
+const authRoutes = require ("./routes/authRoutes");
+const { configDotenv } = require("dotenv");
 
 const app = express();
 
@@ -19,6 +23,7 @@ app.use("/api/ventas", ventasRoutes);
 app.use("/api/recargas", recargasRoutes);
 app.use("/api/facturas", facturasRoutes);
 app.use("/api/clientes", clientesRoutes);
+app.use("/api/auth", authRoutes);
 
 // Servidor
 const PORT = 3000;

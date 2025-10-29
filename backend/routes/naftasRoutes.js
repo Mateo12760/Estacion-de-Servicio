@@ -34,7 +34,7 @@ const validatePrecio = (req, res, next) => {
 };
 
 // Rutas
-router.get('/', naftasController.getNaftas);
+router.get('/', naftasController.getAllNaftas);
 router.get('/:id', validateId, naftasController.getNaftaById);
 router.post('/', validateNaftaBody, naftasController.createNafta);
 router.put('/:id', validateId, validateNaftaBody, naftasController.updateNafta);

@@ -2,90 +2,98 @@ const clientesModel = require('../models/clientesModel');
 
 // Obtener todos los clientes
 const getAllClientes = (req, res) => {
-  clientesModel.getAllClientes((err, rows) => {
+  clientesModel.getAllClientes((err, clientes) => {
     if (err) {
       console.error('Error al obtener clientes:', err);
-      return res.status(500).json({ error: 'Error al obtener los clientes', details: err });
+      return res.status(500).json({ error: 'Error al obtener los clientes' });
     }
-    res.status(200).json(rows);
+    res.json(clientes);
   });
 };
 
-// Obtener un cliente por ID
+// Obtener cliente por ID
 const getClienteById = (req, res) => {
   const { id } = req.params;
-  clientesModel.getClienteById(id, (err, row) => {
+
+  clientesModel.getClienteById(id, (err, cliente) => {
     if (err) {
       console.error('Error al obtener cliente:', err);
-      return res.status(500).json({ error: 'Error al obtener el cliente', details: err });
+      return res.status(500).json({ error: 'Error al obtener el cliente' });
     }
-    if (!row) {
-      return res.status(404).json({ message: 'Cliente no encontrado' });
+    if (!cliente) {
+      return res.status(404).json({ error: 'Cliente no encontrado' });
     }
-    res.status(200).json(row);
+    res.json(cliente);
   });
 };
 
-// Crear un nuevo cliente
+// Crear nuevo cliente
 const createCliente = (req, res) => {
-  const { nombre, apellido, dni, email, telefono } = req.body;
+  const { nombre, apellido, dni } = req.body;
 
   if (!nombre || !apellido || !dni) {
     return res.status(400).json({ error: 'Nombre, apellido y DNI son obligatorios' });
   }
 
-  clientesModel.createCliente(nombre, apellido, dni, email, telefono, (err, result) => {
-    if (err, result) {
+  clientesModel.createCliente({ nombre, apellido, dni }, (err, result) => {
+    if (err) {
       console.error('Error al crear cliente:', err);
-      return res.status(500).json({ error: 'Error al crear el cliente', details: err });
+      return res.status(500).json({ error: 'Error al crear el cliente', details: err.message });
     }
 
-    // Devuelve el cliente creado con ID
     res.status(201).json({
-      id: result.id,
-      nombre,
-      apellido,
-      dni,
-      email,
-      telefono
+      message: 'Cliente creado correctamente',
+      clienteId: result
     });
   });
 };
 
-// Actualizar un cliente existente
+// Actualizar cliente
 const updateCliente = (req, res) => {
   const { id } = req.params;
-  const { nombre, apellido, dni, email, telefono } = req.body;
+  const { nombre, apellido, dni } = req.body;
 
   if (!nombre || !apellido || !dni) {
     return res.status(400).json({ error: 'Nombre, apellido y DNI son obligatorios' });
   }
 
-  clientesModel.updateCliente(id, nombre, apellido, dni, email, telefono, (err, result) => {
+  clientesModel.updateCliente(id, { nombre, apellido, dni }, (err, result) => {
     if (err) {
       console.error('Error al actualizar cliente:', err);
-      return res.status(500).json({ error: 'Error al actualizar el cliente', details: err });
+      return res.status(500).json({ error: 'Error al actualizar el cliente' });
     }
+
     if (result.changes === 0) {
-      return res.status(404).json({ message: 'Cliente no encontrado o sin cambios' });
+      return res.status(404).json({ error: 'Cliente no encontrado' });
     }
-    res.status(200).json({ message: 'Cliente actualizado correctamente' });
+
+    res.json({ message: 'Cliente actualizado correctamente' });
   });
 };
 
-// Eliminar un cliente
+// Eliminar cliente
 const deleteCliente = (req, res) => {
   const { id } = req.params;
 
   clientesModel.deleteCliente(id, (err, result) => {
     if (err) {
       console.error('Error al eliminar cliente:', err);
-      return res.status(500).json({ error: 'Error al eliminar el cliente', details: err });
+
+      // Si la base lanza error por clave foránea, lo aclaramos mejor:
+      if (err.message && err.message.includes('FOREIGN KEY')) {
+        return res.status(400).json({
+          error: 'No se puede eliminar el cliente porque tiene ventas o recargas asociadas'
+        });
+      }
+
+      return res.status(500).json({ error: 'Error al eliminar el cliente' });
     }
+
     if (result.changes === 0) {
-      return res.status(404).json({ message: 'Cliente no encontrado' });
+      return res.status(404).json({ error: 'Cliente no encontrado' });
     }
-    res.status(200).json({ message: 'Cliente eliminado correctamente' });
+
+    res.json({ message: 'Cliente eliminado correctamente' });
   });
 };
 
